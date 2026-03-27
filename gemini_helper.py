@@ -10,6 +10,29 @@ def get_client():
         raise ValueError("GEMINI_API_KEY not found. Check your .env file.")
     return genai.Client(api_key=api_key)
 
+def is_valid_topic(topic: str) -> bool:
+    import re
+    topic = topic.strip()
+
+    # Too short
+    if len(topic) < 3:
+        return False
+
+    # Must contain at least 2 letters
+    if len(re.findall(r'[a-zA-Z]', topic)) < 2:
+        return False
+
+    # Reject if more than 50% of characters are non-alphanumeric
+    non_alnum = len(re.findall(r'[^a-zA-Z0-9\s]', topic))
+    if non_alnum / len(topic) > 0.5:
+        return False
+
+    # Reject repeated characters like "aaaaaaa" or "asdfasdf"
+    if re.fullmatch(r'(.)\1{3,}', topic):
+        return False
+
+    return True
+
 def generate_study_notes(topic: str) -> str:
     client = get_client()
 

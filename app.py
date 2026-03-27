@@ -1,5 +1,5 @@
 import streamlit as st
-from gemini_helper import generate_study_notes
+from gemini_helper import generate_study_notes, is_valid_topic
 
 # --- Page Config ---
 st.set_page_config(
@@ -38,22 +38,31 @@ st.markdown("Enter a topic below and get AI-generated study notes instantly.")
 
 topic = st.text_input(
     "Enter a topic:",
-    placeholder="e.g. Photosynthesis, World War II, Linear Regression"
+    placeholder="e.g. Decision Trees, Linear Regression, Data Warehousing",
+    max_chars=100
 )
-
+char_count = len(topic)
+remaining = 100 - char_count
+if char_count > 0:
+    color = "red" if remaining < 10 else "gray"
+    st.markdown(
+        f"<small style='color:{color};'>{remaining} characters remaining</small>",
+        unsafe_allow_html=True
+    )
 if st.button("Generate Notes", type="primary"):
     if not topic or len(topic.strip()) < 3:
-        st.warning("Please enter a topic with at least 3 characters.")
+        st.warning("⚠️ Please enter a topic with at least 3 characters.")
+    elif not is_valid_topic(topic.strip()):
+        st.warning("⚠️ That doesn't look like a valid topic. Try something like 'Decision Trees' or 'Data Mining'.")
     else:
         with st.spinner("Generating your study notes..."):
             try:
                 notes = generate_study_notes(topic.strip())
-                st.success("Notes generated!")
+                st.success("✅ Notes generated!")
                 st.markdown("---")
                 st.markdown(notes)
                 st.markdown("---")
 
-                # --- Download Button ---
                 st.download_button(
                     label="⬇️ Download Notes as .txt",
                     data=notes,
@@ -61,14 +70,19 @@ if st.button("Generate Notes", type="primary"):
                     mime="text/plain"
                 )
 
-                # --- Save to Session History ---
                 if "history" not in st.session_state:
                     st.session_state.history = []
                 if topic.strip() not in st.session_state.history:
                     st.session_state.history.append(topic.strip())
 
             except Exception as e:
-                st.error(f"Something went wrong: {e}")
+                error_msg = str(e).lower()
+                if "api_key" in error_msg or "invalid" in error_msg or "unauthenticated" in error_msg:
+                    st.error("🔑 API key error: Your Gemini API key is missing or invalid. Check your .env file.")
+                elif "quota" in error_msg or "rate" in error_msg or "limit" in error_msg:
+                    st.error("⏳ Rate limit reached: You've hit the Gemini free tier limit. Wait a moment and try again.")
+                else:
+                    st.error("❌ Something went wrong. Check your internet connection and try again.")
 
 # --- Session History ---
 if "history" in st.session_state and st.session_state.history:
