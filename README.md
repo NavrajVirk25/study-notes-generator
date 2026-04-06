@@ -89,7 +89,7 @@ pytest test_app.py -v
 
 Expected output:
 ```
-14 passed in 2.XXs
+14 passed in X.xx secs
 ```
 
 Tests cover input validation logic and AI API call behaviour.
